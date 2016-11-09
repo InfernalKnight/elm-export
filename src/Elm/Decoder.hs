@@ -12,7 +12,8 @@ module Elm.Decoder
   ) where
 
 import           Control.Monad.Reader
-import           Data.Text
+import           Data.Semigroup
+import           Data.Text hiding (map)
 import           Elm.Common
 import           Elm.Type
 import           Formatting
@@ -24,6 +25,24 @@ class HasDecoderRef a where
   renderRef :: a -> Reader Options Text
 
 instance HasDecoder ElmDatatype where
+    render d@(ElmDatatype name mc@(MultipleConstructors _)) = do
+      fnName <- renderRef d
+      let fnBody  =
+            "    in \"" <> toLower name <> "\" := string `andThen` stringTo" <> name
+          catch = "            _ -> fail <| \"unexpected " <> name <> " -- \" ++ s"
+          localFn = "    let stringTo" <> name <> " s ="
+          caseHead = "        case s of"
+          bot = sformat (cr % stext % cr % stext) catch fnBody
+          top = sformat
+            (stext % " : Decoder " % stext % cr % stext % " =" % cr %
+             stext % cr % stext % stext)
+            fnName
+            name
+            fnName
+            localFn
+            caseHead <$>
+            render mc
+      (flip mappend bot) <$> top
     render d@(ElmDatatype name constructor) = do
         fnName <- renderRef d
         sformat
@@ -46,8 +65,17 @@ instance HasDecoder ElmConstructor where
     render (NamedConstructor name value) =
         sformat ("    decode " % stext % cr % stext) name <$> render value
     render (RecordConstructor name value) =
-        sformat ("    decode " % stext % cr % stext) name <$> render value
-
+        sformat ("    decode  " % stext % cr % stext) name <$> render value
+    render (MultipleConstructors xs) =
+      let renderLine t (NamedConstructor name value) =
+            sformat (stext % cr % "            " %
+                     "\"" % stext % "\" -> succeed " % stext % stext)
+            t (toLower name) name <$> render value
+          renderLine t (RecordConstructor name value) =
+           sformat (stext % cr % stext % " record " % stext % stext)
+           t (toLower name) name <$> render value
+          renderLine t (MultipleConstructors ys) = foldM renderLine t ys
+      in foldM renderLine mempty xs
 
 instance HasDecoder ElmValue where
     render (ElmRef name) = pure (sformat ("decode" % stext) name)
@@ -59,6 +87,7 @@ instance HasDecoder ElmValue where
             ("        |> required \"" % stext % "\" " % stext)
             (fieldModifier name) <$>
             render value
+    render ElmEmpty = pure mempty
 
 
 instance HasDecoderRef ElmPrimitive where
