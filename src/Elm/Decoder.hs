@@ -109,6 +109,8 @@ instance HasDecoderRef ElmPrimitive where
     renderRef EChar = pure "char"
     renderRef EFloat = pure "float"
     renderRef EString = pure "string"
+    renderRef EUuid = pure
+      "(customDecoder string (Result.FromMaybe \"Error decoding Uuid\" << Uuid.fromString))"
 
 
 toElmDecoderRefWith :: ElmType a => Options -> a -> Text

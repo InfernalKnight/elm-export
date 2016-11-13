@@ -13,6 +13,7 @@ import           Data.Map
 import           Data.Proxy
 import           Data.Text
 import           Data.Time
+import           Data.UUID.Types (UUID)
 import           GHC.Generics
 import           Prelude
 
@@ -36,6 +37,7 @@ data ElmPrimitive
               ElmDatatype
     | EDict ElmPrimitive
             ElmDatatype
+    | EUuid
      deriving (Show, Eq)
 
 
@@ -192,3 +194,6 @@ instance ElmType Char where
 
 instance ElmType Bool where
   toElmType _ = ElmPrimitive EBool
+
+instance ElmType UUID where
+  toElmType _ = ElmPrimitive EUuid

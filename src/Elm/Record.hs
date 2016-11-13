@@ -71,6 +71,7 @@ instance HasTypeRef ElmPrimitive where
     renderRef EString = pure "String"
     renderRef EUnit = pure "()"
     renderRef EFloat = pure "Float"
+    renderRef EUuid = pure "Uuid"
 
 toElmTypeRefWith :: ElmType a => Options -> a -> Text
 toElmTypeRefWith options x = runReader (renderRef (toElmType x)) options
